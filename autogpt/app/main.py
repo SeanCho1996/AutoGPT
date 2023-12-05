@@ -54,6 +54,7 @@ def run_auto_gpt(
     ai_name: Optional[str] = None,
     ai_role: Optional[str] = None,
     ai_goals: tuple[str] = tuple(),
+    task: str = "",
 ):
     # Configure logging before we do anything else.
     logger.set_level(logging.DEBUG if debug else logging.INFO)
@@ -143,6 +144,7 @@ def run_auto_gpt(
         name=ai_name,
         role=ai_role,
         goals=ai_goals,
+        task=task,
     )
     ai_config.command_registry = command_registry
     # print(prompt)
@@ -243,7 +245,7 @@ def run_interaction_loop(
     #########################
     # Application Main Loop #
     #########################
-
+    exit_flag = False
     while cycles_remaining > 0:
         logger.debug(f"Cycle budget: {cycle_budget}; remaining: {cycles_remaining}")
 
@@ -264,10 +266,11 @@ def run_interaction_loop(
         # Get user input #
         ##################
         if cycles_remaining == 1:  # Last cycle
-            user_feedback, user_input, new_cycles_remaining = get_user_feedback(
-                config,
-                ai_config,
-            )
+            user_feedback, user_input, new_cycles_remaining = UserFeedback.EXIT, "", None
+            # user_feedback, user_input, new_cycles_remaining = get_user_feedback(
+            #     config,
+            #     ai_config,
+            # )
 
             if user_feedback == UserFeedback.AUTHORIZE:
                 if new_cycles_remaining is not None:
@@ -294,7 +297,8 @@ def run_interaction_loop(
                 )
             elif user_feedback == UserFeedback.EXIT:
                 logger.typewriter_log("Exiting...", Fore.YELLOW)
-                exit()
+                # exit()
+                exit_flag = True
             else:  # user_feedback == UserFeedback.TEXT
                 command_name = "human_feedback"
         else:
@@ -307,6 +311,8 @@ def run_interaction_loop(
                     "AUTHORISED COMMANDS LEFT: ", Fore.CYAN, f"{cycles_remaining}"
                 )
 
+        if exit_flag:
+            break
         ###################
         # Execute Command #
         ###################
@@ -436,6 +442,7 @@ def construct_main_ai_config(
     name: Optional[str] = None,
     role: Optional[str] = None,
     goals: tuple[str] = tuple(),
+    task: str = "",
 ) -> AIConfig:
     """Construct the prompt for the AI to respond to
 
@@ -472,20 +479,21 @@ def construct_main_ai_config(
             f"Would you like me to return to being {ai_config.ai_name}?",
             speak_text=True,
         )
-        should_continue = clean_input(
-            config,
-            f"""Continue with the last settings?
-Name:  {ai_config.ai_name}
-Role:  {ai_config.ai_role}
-Goals: {ai_config.ai_goals}
-API Budget: {"infinite" if ai_config.api_budget <= 0 else f"${ai_config.api_budget}"}
-Continue ({config.authorise_key}/{config.exit_key}): """,
-        )
+#         should_continue = clean_input(
+#             config,
+#             f"""Continue with the last settings?
+# Name:  {ai_config.ai_name}
+# Role:  {ai_config.ai_role}
+# Goals: {ai_config.ai_goals}
+# API Budget: {"infinite" if ai_config.api_budget <= 0 else f"${ai_config.api_budget}"}
+# Continue ({config.authorise_key}/{config.exit_key}): """,
+#         )
+        should_continue = config.exit_key
         if should_continue.lower() == config.exit_key:
             ai_config = AIConfig()
 
     if any([not ai_config.ai_name, not ai_config.ai_role, not ai_config.ai_goals]):
-        ai_config = prompt_user(config)
+        ai_config = prompt_user(config, task=task)
         ai_config.save(config.workdir / config.ai_settings_file)
 
     if config.restrict_to_workspace:

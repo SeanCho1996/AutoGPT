@@ -19,7 +19,9 @@ from autogpt.prompts.default_prompts import (
 
 
 def prompt_user(
-    config: Config, ai_config_template: Optional[AIConfig] = None
+    config: Config, 
+    ai_config_template: Optional[AIConfig] = None,
+    task: str = ""
 ) -> AIConfig:
     """Prompt the user for input
 
@@ -57,9 +59,11 @@ def prompt_user(
             speak_text=True,
         )
 
-        user_desire = utils.clean_input(
-            config, f"{Fore.LIGHTBLUE_EX}I want Auto-GPT to{Style.RESET_ALL}: "
-        )
+        # user_desire = utils.clean_input(
+        #     config, f"{Fore.LIGHTBLUE_EX}I want Auto-GPT to{Style.RESET_ALL}: "
+        # )
+        user_desire = "I want Auto-GPT to : " + task
+        logger.typewriter_log("You want Auto-GPT to: ", Fore.GREEN, user_desire)
 
     if user_desire.strip() == "":
         user_desire = DEFAULT_USER_DESIRE_PROMPT  # Default prompt
